@@ -1,5 +1,8 @@
 import tensorflow as tf
 from tensorflow import keras
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from sklearn.metrics import classification_report, confusion_matrix
+import pandas as pd
 import numpy as np
 from PIL import Image
 import os
@@ -7,7 +10,7 @@ import sys
 import pathlib
 
 IMG_SIZE = (64, 64)
-BATCH_SIZE = 24
+BATCH_SIZE = 16
 
 def create_model():
     return keras.Sequential([
@@ -78,35 +81,55 @@ def train_model():
     model.compile(optimizer='adam',
                  loss='sparse_categorical_crossentropy',
                  metrics=['accuracy'])
-    
-    #If training doesn't update much
-    early_stopping = tf.keras.callbacks.EarlyStopping( monitor='val_loss', patience=10, restore_best_weights=True)
 
 
-    model.fit(train_ds, validation_data=val_ds, epochs=50, callbacks=[early_stopping])
+    model.fit(train_ds, validation_data=val_ds, epochs=200, callbacks=[early_stopping])
     model.save('fruit_model.h5')
     print("End of Training")
  
 def predict_image():
+    
+    test_dir = "test"
+
     if not os.path.exists('fruit_model.h5'):
         print("ERROR: no training file 'fruit_model.h5'. Train the model first")
         return
     
-    if not os.path.exists('test.png'):
-        print("ERROR: file test.png not found.")
+    if not os.path.exists(test_dir):
+        print("ERROR: folder test not found.")
         return
     
     model = keras.models.load_model('fruit_model.h5')
-    img = Image.open('test.png').convert('RGB').resize(IMG_SIZE)
-    img_array = np.array(img) / 255.0
-    img_array = np.expand_dims(img_array, axis=0)
+
+    test_datagen = tf.keras.preprocessing.image.ImageDataGenerator(
+        rescale=1./255 
+    )
     
-    prediction = model.predict(img_array)
+    test_generator = test_datagen.flow_from_directory(
+        directory=test_dir,
+        target_size=IMG_SIZE,
+        batch_size=BATCH_SIZE,
+        class_mode='categorical',
+        shuffle=False,
+        classes=None  
+    )
+
+    class_labels = list(test_generator.class_indices.keys())
+    predictions = model.predict(test_generator, verbose=1)
+    predicted_classes = np.argmax(predictions, axis=1)
     class_names = ['banana', 'cherry', 'together']
-    predicted_class = class_names[np.argmax(prediction)]
-    confidence = np.max(prediction)
-    
-    print(f"Guess: {predicted_class} ({confidence:.2%})")
+    #predicted_classes = class_names[np.argmax(predictions, axis=1)]
+    confidence = np.max(predictions)
+    print(f"Guesses: {predicted_classes} ({confidence:.2%})")
+
+    #ACCURACY
+    true_classes = test_generator.classes
+    accuracy = np.mean(predicted_classes == true_classes)
+    print(f"Accuracy: {accuracy:.4f}")
+
+    #MATRIX CONFUSION
+    cm = confusion_matrix(true_classes, predicted_classes)
+    print(pd.DataFrame(cm, columns=class_labels, index=class_labels))
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
@@ -116,4 +139,4 @@ if __name__ == "__main__":
     elif sys.argv[1] == "predict":
         predict_image()
     else:
-        print("Invalid command. Utilisez 'train' ou 'predict'")
+        print("Invalid command. Use 'train' or 'predict'")
