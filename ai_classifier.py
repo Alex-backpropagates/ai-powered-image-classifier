@@ -133,7 +133,7 @@ def predict_image():
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("Usage: python script.py [train|predict]")
+        print("Usage: python ai_classifier.py [train|predict]")
     elif sys.argv[1] == "train":
         train_model()
     elif sys.argv[1] == "predict":
