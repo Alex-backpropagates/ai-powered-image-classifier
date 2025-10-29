@@ -8,10 +8,11 @@ achieved more than 90% accuracy on Cherry or Banana Alone, 60% with label togeth
 # How to Use
 
 First train the program, the pictures used are in the folders cherry, banana and together
-python ai_classifier.py train
+<br /> ```python ai_classifier.py train```
 
 Then predict with the test pictures in the folder "test", it gives you accuracy and the confusion matrix : 
-python ai_classifier.py predict
+<br /> ```python ai_classifier.py predict```
+
 
 
 
