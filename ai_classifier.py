@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import roc_auc_score
 import pandas as pd
 import numpy as np
 from PIL import Image
@@ -10,7 +11,7 @@ import sys
 import pathlib
 
 IMG_SIZE = (64, 64)
-BATCH_SIZE = 16
+BATCH_SIZE = 32
 
 def create_model():
     return keras.Sequential([
@@ -83,7 +84,7 @@ def train_model():
                  metrics=['accuracy'])
 
 
-    model.fit(train_ds, validation_data=val_ds, epochs=200, callbacks=[early_stopping])
+    model.fit(train_ds, validation_data=val_ds, epochs=100)
     model.save('fruit_model.h5')
     print("End of Training")
  
@@ -130,6 +131,16 @@ def predict_image():
     #MATRIX CONFUSION
     cm = confusion_matrix(true_classes, predicted_classes)
     print(pd.DataFrame(cm, columns=class_labels, index=class_labels))
+
+    #MACRO AVERAGE (AUC)
+    print("Probabilities and Macro (ROC-AUC)")
+
+    for i, class_name in enumerate(["cherry", "banana", "together"]):
+        auc = roc_auc_score((true_classes == i).astype(int), predictions[:, i])
+        print(f"{class_name}: {auc:.3f}")
+
+    macro_auc = roc_auc_score(true_classes, predictions, multi_class='ovr', average='macro')
+    print(f"Macro: {macro_auc:.3f}")
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
